@@ -1,0 +1,25 @@
+{
+  "lang": "fr",
+  "analysis_words": 10000,
+  "unresolved_fraction": 0.2379,
+  "min_chord_len_histogram": {
+    "1": 5,
+    "2": 225,
+    "3": 782,
+    "4": 1912,
+    "5": 2282,
+    "6": 1855,
+    "7": 1388,
+    "8": 804,
+    "9": 411,
+    "10": 204,
+    "11": 85,
+    "12": 27,
+    "13": 11,
+    "14": 7,
+    "15": 2
+  },
+  "expected_keys_per_word_chord": 3.097,
+  "expected_keys_per_word_full": 3.947,
+  "keystroke_savings_pct": 21.55
+}

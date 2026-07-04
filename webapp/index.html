@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comp Trainer — learn chord typing, the fastest way to type</title>
+  <meta name="description" content="Learn to type with Comp, the chord-typing keyboard. Press the key letters of a word together and let the keyboard fill in the rest. A free jazz-themed typing game." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>" />
+</head>
+<body>
+  <header>
+    <h1><span class="note">♪</span> Comp Trainer</h1>
+    <p class="tagline">Play words like a jazz pianist — chords, not single notes.</p>
+  </header>
+
+  <!-- menu -->
+  <section id="menu" class="panel menu">
+    <h2>How it works</h2>
+    <p>
+      Instead of typing <kbd>a</kbd> <kbd>p</kbd> <kbd>p</kbd> <kbd>l</kbd> <kbd>e</kbd>
+      one key at a time, press <kbd>a</kbd>+<kbd>p</kbd>+<kbd>l</kbd> <em>together</em>
+      and hit <kbd>space</kbd>. Comp infers the word — <b>apple</b> — from the chord and
+      the context. When two words fit the same chord, a bar appears: pick with
+      <kbd>1</kbd>–<kbd>9</kbd>, <kbd>←</kbd>/<kbd>→</kbd>, or <kbd>space</kbd>.
+    </p>
+    <p>Pick a language, then work through the sets. Three stars each unlocks real speed.</p>
+    <div class="lang-row" id="langs"></div>
+    <div class="sets" id="sets"></div>
+    <div class="howto">
+      Rule of thumb for a chord: <b>first letter + a strong middle consonant + last letter</b>.
+      Type normally any time — full words always pass straight through.
+    </div>
+  </section>
+
+  <!-- game -->
+  <section id="game" class="panel" style="display:none">
+    <div class="hud">
+      <div class="stat">set&nbsp;<b id="set-title">—</b></div>
+      <div class="stat">phrase&nbsp;<b id="stat-left">1/1</b></div>
+      <div class="stat">WPM&nbsp;<b id="stat-wpm">0</b></div>
+      <div class="stat">keys saved&nbsp;<b id="stat-saved">0%</b></div>
+      <div class="stat combo" id="hud-combo">swing streak&nbsp;<b id="stat-combo">0</b></div>
+    </div>
+    <div class="target" id="target"></div>
+    <div class="hint" id="hint"></div>
+    <div class="typebox focused" id="typebox"></div>
+    <div class="candbar" id="candbar"></div>
+    <div class="chordviz" id="chordviz"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="controls">
+      <button class="ghost" id="btn-quit">← back to sets</button>
+    </div>
+  </section>
+
+  <!-- results -->
+  <section id="results" class="panel results" style="display:none">
+    <h2>Set complete</h2>
+    <div class="stars-big" id="res-stars">★★★</div>
+    <p id="res-line"></p>
+    <div class="grid">
+      <div class="cell"><b id="res-wpm">0</b><span>words / min</span></div>
+      <div class="cell"><b id="res-saved">0%</b><span>keystrokes saved</span></div>
+      <div class="cell"><b id="res-acc">0%</b><span>accuracy</span></div>
+      <div class="cell"><b id="res-chords">0</b><span>chords played</span></div>
+    </div>
+    <button class="primary" id="btn-again">Play again</button>
+    <button class="ghost" id="btn-menu">All sets</button>
+  </section>
+
+  <div class="notes-layer" id="notes"></div>
+
+  <footer>
+    <a href="https://github.com/huodebing-alt/comp-keyboard">Comp</a> — the chord-typing
+    keyboard for macOS · MIT license
+  </footer>
+
+  <script src="engine.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

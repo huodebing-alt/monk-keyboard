@@ -1,0 +1,25 @@
+{
+  "lang": "pt",
+  "analysis_words": 10000,
+  "unresolved_fraction": 0.2115,
+  "min_chord_len_histogram": {
+    "1": 5,
+    "2": 217,
+    "3": 731,
+    "4": 1744,
+    "5": 2326,
+    "6": 1930,
+    "7": 1318,
+    "8": 868,
+    "9": 437,
+    "10": 242,
+    "11": 124,
+    "12": 40,
+    "13": 14,
+    "14": 3,
+    "17": 1
+  },
+  "expected_keys_per_word_chord": 3.251,
+  "expected_keys_per_word_full": 4.197,
+  "keystroke_savings_pct": 22.52
+}

@@ -1,0 +1,24 @@
+{
+  "lang": "it",
+  "analysis_words": 10000,
+  "unresolved_fraction": 0.2085,
+  "min_chord_len_histogram": {
+    "1": 5,
+    "2": 216,
+    "3": 717,
+    "4": 1649,
+    "5": 2262,
+    "6": 2004,
+    "7": 1414,
+    "8": 849,
+    "9": 496,
+    "10": 251,
+    "11": 100,
+    "12": 26,
+    "13": 8,
+    "14": 3
+  },
+  "expected_keys_per_word_chord": 3.33,
+  "expected_keys_per_word_full": 4.295,
+  "keystroke_savings_pct": 22.46
+}

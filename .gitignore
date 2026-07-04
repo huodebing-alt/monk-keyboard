@@ -1,0 +1,4 @@
+dist/
+macos/build/
+.DS_Store
+.claude/

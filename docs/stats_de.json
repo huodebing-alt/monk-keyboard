@@ -1,0 +1,26 @@
+{
+  "lang": "de",
+  "analysis_words": 10000,
+  "unresolved_fraction": 0.2211,
+  "min_chord_len_histogram": {
+    "1": 5,
+    "2": 203,
+    "3": 753,
+    "4": 1883,
+    "5": 2439,
+    "6": 1949,
+    "7": 1215,
+    "8": 723,
+    "9": 401,
+    "10": 195,
+    "11": 128,
+    "12": 64,
+    "13": 30,
+    "14": 10,
+    "15": 1,
+    "16": 1
+  },
+  "expected_keys_per_word_chord": 3.312,
+  "expected_keys_per_word_full": 4.39,
+  "keystroke_savings_pct": 24.54
+}
