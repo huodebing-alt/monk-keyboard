@@ -14,7 +14,9 @@ class CompInputController: IMKInputController {
                            resourceDir: resources.appendingPathComponent("dict"),
                            supportDir: support)
     }()
-    static var llm: LLMRanker? = LLMRanker(config: CompInputController.loadConfig())
+    static var llm: LocalRanker? = LocalRanker(
+        config: CompInputController.loadConfig(),
+        resourceDir: Bundle.main.resourceURL ?? URL(fileURLWithPath: "."))
     static var chordWindow: TimeInterval = {
         let config = CompInputController.loadConfig()
         let ms = (config["chordWindowMs"] as? Double) ?? 45

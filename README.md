@@ -18,7 +18,7 @@
 | `T+M+R+W` + space | **tomorrow** |
 | `a` `p` `p` `l` `e` (typed normally) + space | **apple** — normal typing always passes through untouched |
 
-Comp infers the most likely word from your chord **and the context of what you're writing**, using a frequency language model with optional LLM (Claude) re-ranking. In the rare case a chord genuinely matches more than one likely word, a candidate bar appears under your cursor — pick with `1`–`9`, `←`/`→`, or just hit space for the top choice. Every choice you make is learned, so your personal vocabulary resolves instantly next time.
+Comp infers the most likely word from your chord **and the context of what you're writing**, using a frequency language model plus an embedded on-device LLM (SmolLM2-135M) — fully offline. In the rare case a chord genuinely matches more than one likely word, a candidate bar appears under your cursor — pick with `1`–`9`, `←`/`→`, or just hit space for the top choice. Every choice you make is learned, so your personal vocabulary resolves instantly next time.
 
 **Rule of thumb for a good chord:** first letter + a strong middle consonant + last letter.
 
@@ -48,20 +48,24 @@ unzip Comp-*-macos.zip && ./install.sh
 
 ```bash
 git clone https://github.com/huodebing-alt/comp-keyboard.git
-cd comp-keyboard && ./macos/build.sh   # requires Xcode Command Line Tools
+cd comp-keyboard && ./macos/build.sh   # requires Xcode Command Line Tools + cmake
 ```
+
+The build script fetches llama.cpp and the SmolLM2-135M weights automatically on first run.
 
 > The app is ad-hoc signed (not notarized). If macOS complains, the zip's `install.sh` clears the quarantine flag for you.
 
-### Optional: LLM context re-ranking
+### Built-in on-device LLM
 
-Create `~/Library/Application Support/Comp/config.json`:
+Comp embeds **[SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M)** (Apache-2.0), running via llama.cpp compiled into the app. When a chord is ambiguous, the model re-ranks the candidates by how well each continues your sentence — `A+P` after "she bit into the" becomes *apple*, not *approach* — in ~35 ms on Apple Silicon, entirely offline. No API key, no network, ever.
+
+Optional tuning in `~/Library/Application Support/Comp/config.json`:
 
 ```json
-{ "apiKey": "sk-ant-...", "model": "claude-haiku-4-5-20251001", "languages": ["en"], "chordWindowMs": 45 }
+{ "llm": true, "languages": ["en"], "chordWindowMs": 45 }
 ```
 
-With an API key set, ambiguous chords are re-ranked by Claude using your recent words as context — `A+P` after "she bit into the" becomes *apple*, not *approach*. Without a key, everything runs 100% locally and offline.
+Set `"llm": false` to disable the model and run pure frequency + adaptation ranking.
 
 ## Learn it as a game
 
@@ -79,7 +83,7 @@ English, Spanish (Español), French (Français), German (Deutsch), Italian (Ital
 | Standard keyboard | ✅ | ✅ | ❌ | ❌ |
 | Zero code to memorize | ✅ | ✅ | ✅ | ❌ (months of training) |
 | Normal typing unaffected | ✅ | ⚠️ | ❌ | ❌ |
-| Context-aware (LLM) | ✅ opt-in | varies | ❌ | ❌ |
+| Context-aware (LLM) | ✅ on-device | varies | ❌ | ❌ |
 
 ## FAQ
 
@@ -89,7 +93,7 @@ English, Spanish (Español), French (Français), German (Deutsch), Italian (Ital
 
 **What happens when a chord is ambiguous?** A small bar appears under the cursor listing the matching words; choose with a number key, arrow keys, or space. Comp remembers your choice.
 
-**Is my typing sent anywhere?** No. Inference is fully local. The optional Claude re-ranking only activates if you add your own API key, and only sends the last few words plus the candidate list when a chord is ambiguous.
+**Is my typing sent anywhere?** No. Everything — the frequency engine, your personal adaptation data, and the embedded SmolLM2-135M language model — runs on your machine. Comp never opens a network connection.
 
 **Which platforms?** macOS today (InputMethodKit). The engine is ~200 lines of portable logic with a reference JavaScript port in [`webapp/engine.js`](webapp/engine.js) — Windows (TSF) and Linux (IBus/Fcitx) ports are welcome contributions.
 

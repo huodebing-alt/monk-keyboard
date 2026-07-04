@@ -2,3 +2,5 @@ dist/
 macos/build/
 .DS_Store
 .claude/
+third_party/
+macos/Models/

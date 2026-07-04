@@ -10,8 +10,9 @@ abstract: |
   letter-by-letter typing to fully chorded entry, produces correct text, and the
   two styles can be mixed freely inside a single word. We formalize chords as
   ordered sequences of unordered key groups, give a log-linear inference model
-  over a frequency lexicon with optional large-language-model re-ranking, and
-  derive the method's speed ceiling from a keystroke-level motor model.
+  over a frequency lexicon with embedded on-device neural re-ranking (a
+  135M-parameter language model), and derive the method's speed ceiling from a
+  keystroke-level motor model.
   On frequency lexicons of six languages, chorded entry reduces expected key
   presses per word by 21–25% before any context is used, and a motor-time
   analysis shows a practical ceiling near twice the user's sequential typing
@@ -159,19 +160,29 @@ least $2^{1.5} \approx 2.8\times$ more probable than the runner-up," a
 direct bound on the silent-error odds of $1/(1+2^{\delta}) \approx 26\%$ *in
 the worst accepted case* and far lower in expectation.
 
-## 3.4 LLM re-ranking
+## 3.4 On-device neural re-ranking
 
-The local engine is a sound retriever: the correct word is in its candidate
-list whenever the chord matches it. Context selection is where a large
-language model helps. When the bar appears (and only then), Comp optionally
-sends the last dozen committed words plus the candidate list to an LLM and
-asks for a ranking; the reply reorders the bar in place if it arrives before
-the user selects. The design point is that the LLM sits *behind* the local
-engine — never on the critical path, never able to hallucinate a word outside
-the matched set, and disabled entirely unless the user supplies an API key.
-With a contextual prior, chords like `A+P` after "she bit into the" resolve
-to "apple" without a bar at all; the local unigram model alone cannot know
-that.
+The chord engine is a sound retriever: the correct word is in its candidate
+list whenever the chord matches it. Context selection is where a neural
+language model helps, and the candidate-scoring task is small enough that a
+very small model suffices: the model never generates — it only compares the
+likelihoods of half a dozen given words as continuations of the user's last
+few words. Comp embeds SmolLM2-135M (Apache-2.0), a 135-million-parameter
+causal LM, 4-bit quantized to ~100 MB and executed by llama.cpp compiled into
+the input method. When the bar appears (and only then), each candidate $w$
+with tokenization $u_1..u_r$ is scored by its continuation log-probability
+
+$$\log P(w \mid \text{context}) = \sum_{j=1}^{r} \log P_{\theta}(u_j \mid \text{context}, u_{<j})$$
+
+and the bar reorders by this score if inference finishes before the user
+selects. On Apple Silicon (CPU-only) a full re-rank of six candidates over a
+twelve-word context measures 33–45 ms — comfortably inside the human
+decision time the bar itself represents. The architecture keeps three
+guarantees: the model is never on the critical typing path; it cannot
+introduce a word outside the chord-matched set (no hallucination surface);
+and no text ever leaves the machine. With this contextual prior, chords like
+`A+P` after "she bit into the" rank "apple" first — the unigram model alone
+cannot know that.
 
 # 4. Why chords are informative enough: an entropy argument
 
@@ -311,14 +322,15 @@ keyboard.
   the same heuristic the engine rewards, so practice transfers directly.
 - **Latency discipline.** Local inference over a 25k lexicon is sub-
   millisecond on 2020s hardware (a first-letter index bounds each query to a
-  few hundred subsequence checks). The LLM is quarantined to the ambiguous
-  path with a 2-second timeout and no blocking semantics.
+  few hundred subsequence checks). The neural re-ranker is quarantined to the
+  ambiguous path, runs asynchronously in ~35 ms, and never blocks a keystroke.
 
 # 8. Implementation
 
 The reference implementation ships as: (a) a macOS input method (Swift,
 InputMethodKit) installable per-user without administrator rights — it works
-in every text field system-wide; (b) a browser-based trainer implementing the
+in every text field system-wide, with SmolLM2-135M embedded via statically
+linked llama.cpp for offline contextual re-ranking; (b) a browser-based trainer implementing the
 identical engine and scoring in JavaScript, structured as a game with five
 "sets" (Warm-Up, Duets, Trio, Standards, Improv), live WPM /
 keystrokes-saved / streak meters, and per-language progress; (c) frequency
@@ -328,9 +340,10 @@ so trained intuition transfers exactly from the game to the keyboard.
 
 # 9. Limitations and future work
 
-The unigram-plus-features local model is deliberately simple; a shipped
-bigram table or a small on-device neural LM would cut the bar rate further
-without the network. Scripts without alphabetic spelling (Chinese, Japanese)
+The silent-commit path currently uses only the unigram-plus-features model;
+extending the embedded neural re-ranker from the ambiguous path to a
+pre-emptive prior on every commit (its ~35 ms budget permits this between
+keystrokes) would cut the bar rate itself, not just resolve it better. Scripts without alphabetic spelling (Chinese, Japanese)
 need a composition layer — chording over pinyin or romaji is a natural
 extension, since both are Latin encodings with strong lexicon priors.
 Simultaneity detection on membrane keyboards with limited rollover caps chord
@@ -368,3 +381,8 @@ chord; the keyboard comps the rest.
 7. P. Lison, J. Tiedemann. "OpenSubtitles2016: Extracting Large Parallel
    Corpora from Movie and TV Subtitles." *LREC*, 2016. (Source of the
    frequency lexicons, via the FrequencyWords compilation.)
+8. L. Ben Allal et al. "SmolLM2: When Smol Goes Big — Data-Centric Training
+   of a Small Language Model." 2025. (The embedded re-ranking model,
+   Apache-2.0.)
+9. G. Gerganov et al. *llama.cpp* — LLM inference in C/C++.
+   https://github.com/ggml-org/llama.cpp (The embedded inference runtime.)
