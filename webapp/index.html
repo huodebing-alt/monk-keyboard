@@ -29,6 +29,15 @@
     </p>
     <p>Pick a language, then sit with each set. Three stars each.</p>
     <div class="lang-row" id="langs"></div>
+    <div class="flow-row">
+      <button id="flow-toggle" class="flow">flow mode: off</button>
+      <span class="flow-desc">No candidate bar — the highest-ranking word always wins.
+        Trust the chord.</span>
+    </div>
+    <p id="flow-note" class="flow-note" style="display:none">
+      Flow is on: ambiguous chords commit their best guess instead of asking.
+      Wrong guesses count as mistakes — add one more letter to the chord.
+    </p>
     <div class="sets" id="sets"></div>
     <div class="howto">
       A good chord: <b>first letter + a strong middle consonant + last letter</b>.

@@ -27,6 +27,10 @@ Monk infers the most likely word from your chord **and the context of what you'r
 
 **Rule of thumb for a good chord:** first letter + a strong middle consonant + last letter.
 
+### Flow mode
+
+When you'd rather never be asked, turn on **Flow mode**: the candidate bar disappears entirely and every chord commits its highest-ranking word immediately — on ambiguity, the on-device LLM makes the call from your sentence context in ~35 ms, inline. Toggle it from the **input menu → Flow Mode** (menu bar, while Monk is active), or set `"flowMode": true` in the config. Mis-guesses are just typos: retype the word (which also teaches Monk your preference). Flow is at its best after a few days of adaptation, when your personal vocabulary is already winning chords outright.
+
 ## Why it's fast (the math)
 
 From the [design paper](docs/PAPER.md):
@@ -68,7 +72,7 @@ Monk embeds **[SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M)*
 Optional tuning in `~/Library/Application Support/Monk/config.json`:
 
 ```json
-{ "llm": true, "languages": ["en"], "chordWindowMs": 45 }
+{ "llm": true, "languages": ["en"], "chordWindowMs": 45, "flowMode": false }
 ```
 
 Set `"llm": false` to disable the model and run pure frequency + adaptation ranking.
@@ -99,7 +103,7 @@ English, Spanish (Español), French (Français), German (Deutsch), Italian (Ital
 
 **How do capitals work?** Hold Shift on the first key of the chord and the committed word is Capitalized; shift the whole chord for ALL CAPS.
 
-**What happens when a chord is ambiguous?** A small bar appears under the cursor listing the matching words; choose with a number key, arrow keys, or space. Monk remembers your choice.
+**What happens when a chord is ambiguous?** A small bar appears under the cursor listing the matching words; choose with a number key, arrow keys, or space. Monk remembers your choice. Or turn on **Flow mode** and Monk always commits its best guess — no bar, no questions.
 
 **Is my typing sent anywhere?** No. Everything — the frequency engine, your personal adaptation data, and the embedded SmolLM2-135M language model — runs on your machine. Monk never opens a network connection.
 

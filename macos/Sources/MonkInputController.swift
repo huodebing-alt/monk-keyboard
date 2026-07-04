@@ -22,6 +22,26 @@ class MonkInputController: IMKInputController {
         let ms = (config["chordWindowMs"] as? Double) ?? 45
         return ms / 1000.0
     }()
+    /// Flow mode: never show the candidate bar — always commit the highest-
+    /// ranking word. Toggled from the input menu, persisted in config.json.
+    static var flowMode: Bool = {
+        (MonkInputController.loadConfig()["flowMode"] as? Bool) ?? false
+    }() {
+        didSet {
+            if flowMode { MonkInputController.llm?.preload() }
+            saveConfigValue("flowMode", flowMode)
+        }
+    }
+
+    static func saveConfigValue(_ key: String, _ value: Any) {
+        var config = loadConfig()
+        config[key] = value
+        let file = supportDir().appendingPathComponent("config.json")
+        if let data = try? JSONSerialization.data(withJSONObject: config,
+                                                  options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: file)
+        }
+    }
 
     static func supportDir() -> URL {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory,
@@ -94,6 +114,21 @@ class MonkInputController: IMKInputController {
 
     override func recognizedEvents(_ sender: Any!) -> Int {
         return Int(NSEvent.EventTypeMask.keyDown.rawValue)
+    }
+
+    override func menu() -> NSMenu! {
+        let menu = NSMenu(title: "Monk")
+        let item = NSMenuItem(title: "Flow Mode",
+                              action: #selector(toggleFlowMode(_:)),
+                              keyEquivalent: "")
+        item.target = self
+        item.state = MonkInputController.flowMode ? .on : .off
+        menu.addItem(item)
+        return menu
+    }
+
+    @objc func toggleFlowMode(_ sender: Any?) {
+        MonkInputController.flowMode.toggle()
     }
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
@@ -200,7 +235,7 @@ class MonkInputController: IMKInputController {
         currentCandidates = MonkInputController.engine.candidates(groups: groups)
         setMarked(bufferString, client)
         let foldedBuffer = ChordEngine.fold(bufferString)
-        if !currentCandidates.isEmpty &&
+        if !MonkInputController.flowMode && !currentCandidates.isEmpty &&
             (hasChord || ChordEngine.fold(currentCandidates.first!.word) != foldedBuffer) {
             MonkApp.candidatesPanel?.update()
             MonkApp.candidatesPanel?.show()
@@ -228,6 +263,23 @@ class MonkInputController: IMKInputController {
                 commit(display + suffix, client, learned: false)
                 return true
             }
+        }
+        // flow mode: no bar, ever — take the best word and keep moving.
+        // On ambiguity, one bounded on-device LM inference (~35 ms) picks
+        // with context; if the model isn't warm yet, local ranking decides.
+        if MonkInputController.flowMode {
+            var top = currentCandidates[0].word
+            if engine.isAmbiguous(currentCandidates) {
+                let words = currentCandidates.map { $0.word }
+                if let ranked = MonkInputController.llm?.rerankSync(
+                       context: contextWords, candidates: words),
+                   let first = ranked.first {
+                    top = first
+                }
+            }
+            commit(top + suffix, client,
+                   learned: ChordEngine.fold(top) != ChordEngine.fold(bufferString))
+            return true
         }
         if engine.isAmbiguous(currentCandidates) && !awaitingSelection {
             awaitingSelection = true

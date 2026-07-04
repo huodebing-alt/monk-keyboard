@@ -91,6 +91,7 @@ let dictLoaded = false;
 let screen = "menu"; // menu | game | results
 let currentSet = null;
 let progress = JSON.parse(localStorage.getItem("monk-progress") || "{}");
+let flowMode = localStorage.getItem("monk-flow") === "1";
 
 const S = {
   targets: [], targetIdx: 0, wordIdx: 0,
@@ -225,9 +226,19 @@ function renderTypebox() {
     `<span class="buffer">${buf}</span><span class="caret"></span>`;
 }
 
+function renderFlowToggle() {
+  const btn = $("flow-toggle");
+  if (!btn) return;
+  btn.textContent = `flow mode: ${flowMode ? "on" : "off"}`;
+  btn.className = flowMode ? "flow on" : "flow";
+  const note = $("flow-note");
+  if (note) note.style.display = flowMode ? "block" : "none";
+}
+
 function renderCandidates() {
   const bar = $("candbar");
   bar.innerHTML = "";
+  if (flowMode) return; // flow mode: no options, ever
   if (!S.keystrokes.length || !S.candidates.length) return;
   S.candidates.slice(0, 6).forEach((c, i) => {
     const div = document.createElement("div");
@@ -419,10 +430,11 @@ document.addEventListener("keydown", (e) => {
     const buf = S.keystrokes.map((k) => k.ch).join("");
     if (!S.candidates.length) { commitWord(buf, false); return; }
     if (engine.isWord(buf) && !hasChord(groups)) { commitWord(buf, false); return; }
-    if (engine.isAmbiguous(S.candidates)) {
+    if (!flowMode && engine.isAmbiguous(S.candidates)) {
       S.awaitingSelection = true; S.selected = 0;
       renderCandidates(); return;
     }
+    // flow mode (or unambiguous): highest-ranking word wins, no questions
     commitWord(S.candidates[0].word, S.candidates[0].word !== buf);
     return;
   }
@@ -448,6 +460,14 @@ document.addEventListener("keydown", (e) => {
 $("btn-again").onclick = () => startSet(currentSet);
 $("btn-menu").onclick = () => { renderMenu(); show("menu"); };
 $("btn-quit").onclick = () => { renderMenu(); show("menu"); };
+$("flow-toggle").onclick = () => {
+  flowMode = !flowMode;
+  localStorage.setItem("monk-flow", flowMode ? "1" : "0");
+  S.awaitingSelection = false;
+  renderFlowToggle();
+  if (screen === "game") refresh();
+};
+renderFlowToggle();
 
 (async function boot() {
   await loadDict(lang);

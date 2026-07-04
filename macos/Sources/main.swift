@@ -22,6 +22,9 @@ autoreleasepool {
         server: server,
         panelType: kIMKSingleRowSteppingCandidatePanel
     )
+    if MonkInputController.flowMode {
+        MonkInputController.llm?.preload()   // flow mode needs the LM warm
+    }
     NSLog("Monk input method started (%@)", connectionName)
     NSApplication.shared.run()
 }

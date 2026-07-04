@@ -9,7 +9,7 @@ MACOS_DIR="$ROOT/macos"
 BUILD="$MACOS_DIR/build"
 APP="$BUILD/Monk.app"
 DIST="$ROOT/dist"
-VERSION="1.2.0"
+VERSION="1.3.0"
 
 LLAMA_DIR="$ROOT/third_party/llama.cpp"
 LLAMA_BUILD="$LLAMA_DIR/build"

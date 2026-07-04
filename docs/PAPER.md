@@ -113,6 +113,23 @@ additive* over ordinary typing. A user who never chords loses nothing; a user
 who chords badly falls back to the bar; a user who chords well types words in
 single strokes.
 
+## 2.3 Flow mode
+
+The bar is the right default, but it is an interruption, and §5.4 shows the
+interruption rate $\beta$ is the dominant tax on throughput. **Flow mode**
+removes it: the bar never appears and every commit takes the highest-ranking
+candidate. On an ambiguous chord the decision is not left to the unigram
+model alone — the embedded neural re-ranker (§3.4) is consulted
+*synchronously*, a single bounded inference measured at 35–60 ms on Apple
+Silicon, below the perceptual threshold of a keystroke echo. In effect flow
+mode trades the margin rule of §3.3 ($\delta = 1.5$) for $\delta = 0$ plus a
+stronger prior at the decision point. The failure mode is honest: a wrong
+guess is an ordinary typo, repaired by retyping — which simultaneously
+teaches the adaptation table (§6), so each personal chord fails at most once.
+Flow mode is therefore best enabled after a short adaptation period, and the
+toggle (in the input menu, persisted in configuration) makes it a per-mood
+choice rather than a commitment.
+
 # 3. Inference
 
 ## 3.1 Match predicate

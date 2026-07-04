@@ -15,6 +15,10 @@ final class LocalRanker {
     private var ctx: OpaquePointer?    // llama_context *
     private var vocab: OpaquePointer?  // const llama_vocab *
     private var loadAttempted = false
+    /// set on `queue` after a successful load; read from the main thread as a
+    /// cheap gate for the synchronous path (a stale read only delays sync
+    /// re-ranking by one chord, never blocks)
+    private(set) var isLoaded = false
 
     init?(config: [String: Any], resourceDir: URL) {
         if let enabled = config["llm"] as? Bool, !enabled { return nil }
@@ -51,8 +55,15 @@ final class LocalRanker {
         model = m
         ctx = c
         vocab = llama_model_get_vocab(m)
+        isLoaded = true
         NSLog("Monk: local LM loaded (%@)", modelURL.lastPathComponent)
         return true
+    }
+
+    /// Warm the model in the background so the first flow-mode chord
+    /// can already use it.
+    func preload() {
+        queue.async { [weak self] in _ = self?.ensureLoaded() }
     }
 
     private func tokenize(_ text: String) -> [llama_token] {
@@ -104,6 +115,26 @@ final class LocalRanker {
         return total
     }
 
+    /// Core scoring. Must run on `queue` with the model loaded.
+    private func scoreAll(prompt: String, candidates: [String]) -> [String]? {
+        let ctxTokens = tokenize(prompt)
+        guard !ctxTokens.isEmpty else { return nil }
+        var scored: [(String, Double)] = []
+        for cand in candidates {
+            let full = tokenize(prompt + " " + cand.lowercased())
+            // boundary tokenization can perturb the tail of the context;
+            // score everything after the longest common prefix
+            var cp = 0
+            while cp < min(ctxTokens.count, full.count), full[cp] == ctxTokens[cp] { cp += 1 }
+            guard cp >= 1, full.count > cp,
+                  let lp = continuationLogProb(fullTokens: full, prefixLen: cp) else {
+                return nil
+            }
+            scored.append((cand, lp))
+        }
+        return scored.sorted { $0.1 > $1.1 }.map { $0.0 }
+    }
+
     /// Reorder `candidates` by P(candidate | context). Calls back on the main
     /// queue with the new order, or nil to keep the local order.
     func rerank(context: [String], candidates: [String],
@@ -115,30 +146,20 @@ final class LocalRanker {
                 DispatchQueue.main.async { completion(nil) }
                 return
             }
-            let ctxTokens = self.tokenize(prompt)
-            guard !ctxTokens.isEmpty else {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-            var scored: [(String, Double)] = []
-            for cand in candidates {
-                let full = self.tokenize(prompt + " " + cand.lowercased())
-                // boundary tokenization can perturb the tail of the context;
-                // score everything after the longest common prefix
-                var cp = 0
-                while cp < min(ctxTokens.count, full.count), full[cp] == ctxTokens[cp] { cp += 1 }
-                guard cp >= 1, full.count > cp,
-                      let lp = self.continuationLogProb(fullTokens: full, prefixLen: cp) else {
-                    scored = []
-                    break
-                }
-                scored.append((cand, lp))
-            }
-            var result: [String]? = nil
-            if scored.count == candidates.count {
-                result = scored.sorted { $0.1 > $1.1 }.map { $0.0 }
-            }
+            let result = self.scoreAll(prompt: prompt, candidates: candidates)
             DispatchQueue.main.async { completion(result) }
         }
+    }
+
+    /// Synchronous re-rank for flow mode: bounded by one inference (~35 ms on
+    /// Apple Silicon). Returns nil — without blocking — while the model is
+    /// still loading (and kicks the load so the next chord can use it).
+    func rerankSync(context: [String], candidates: [String]) -> [String]? {
+        guard candidates.count > 1, !context.isEmpty else { return nil }
+        guard isLoaded else { preload(); return nil }
+        let prompt = context.suffix(12).joined(separator: " ")
+        var result: [String]? = nil
+        queue.sync { result = self.scoreAll(prompt: prompt, candidates: candidates) }
+        return result
     }
 }

@@ -4,7 +4,11 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Monk</string>
 	<key>CFBundleExecutable</key>
+	<string>Monk</string>
+	<key>CFBundleIconFile</key>
 	<string>Monk</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.monkkeyboard.inputmethod.Monk</string>
@@ -12,35 +16,31 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>Monk</string>
-	<key>CFBundleDisplayName</key>
-	<string>Monk</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleIconFile</key>
-	<string>Monk</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.0</string>
+	<string>1.3.0</string>
 	<key>CFBundleVersion</key>
-	<string>3</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>13.0</string>
-	<key>LSBackgroundOnly</key>
-	<true/>
+	<string>4</string>
 	<key>InputMethodConnectionName</key>
 	<string>Monk_1_Connection</string>
 	<key>InputMethodServerControllerClass</key>
 	<string>MonkInputController</string>
+	<key>LSBackgroundOnly</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>MIT License</string>
+	<key>TISInputSourceID</key>
+	<string>com.monkkeyboard.inputmethod.Monk</string>
+	<key>TISIntendedLanguage</key>
+	<string>en</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Latn</string>
 	</array>
 	<key>tsInputMethodIconFileKey</key>
 	<string>monk.tiff</string>
-	<key>TISInputSourceID</key>
-	<string>com.monkkeyboard.inputmethod.Monk</string>
-	<key>TISIntendedLanguage</key>
-	<string>en</string>
-	<key>NSHumanReadableCopyright</key>
-	<string>MIT License</string>
 </dict>
 </plist>
