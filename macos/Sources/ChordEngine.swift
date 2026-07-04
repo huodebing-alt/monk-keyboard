@@ -12,7 +12,7 @@ struct Candidate {
     let score: Double
 }
 
-/// The Comp inference engine: given chord groups and context, rank the
+/// The Monk inference engine: given chord groups and context, rank the
 /// words of the active dictionaries.
 ///
 /// score(w) = log2 freq(w)
@@ -69,9 +69,19 @@ final class ChordEngine {
     static func fold(_ s: String) -> String {
         return s.lowercased()
             .folding(options: [.diacriticInsensitive], locale: Locale(identifier: "en"))
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "’", with: "")
     }
 
     func isWord(_ s: String) -> Bool { wordSet.contains(s.lowercased()) }
+
+    /// Display form for a folded buffer, if a lexicon word folds to it
+    /// ("doesnt" -> "doesn't"); nil when no word matches.
+    func displayForm(folded: String) -> String? {
+        guard let f = folded.first, let idxs = byFirst[f] else { return nil }
+        for i in idxs where entries[i].folded == folded { return entries[i].word }
+        return nil
+    }
 
     /// Greedy subsequence match allowing free letter order inside a group.
     /// Returns false if any chord letter cannot be placed.

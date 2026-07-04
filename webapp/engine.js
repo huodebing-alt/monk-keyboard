@@ -1,4 +1,4 @@
-/* Comp chord-inference engine — JavaScript port of macos/Sources/ChordEngine.swift.
+/* Monk chord-inference engine — JavaScript port of macos/Sources/ChordEngine.swift.
  * Keep the scoring constants in sync with the Swift implementation. */
 
 const SCORE = {
@@ -13,7 +13,7 @@ const SCORE = {
 };
 
 function foldAccents(s) {
-  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/['’]/g, "");
 }
 
 class ChordEngine {

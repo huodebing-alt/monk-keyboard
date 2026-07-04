@@ -1,24 +1,24 @@
 import Cocoa
 import InputMethodKit
 
-@objc(CompInputController)
-class CompInputController: IMKInputController {
+@objc(MonkInputController)
+class MonkInputController: IMKInputController {
 
     // one engine shared by every client (Mail, Safari, ...)
     static var engine: ChordEngine = {
         let resources = Bundle.main.resourceURL ?? URL(fileURLWithPath: ".")
-        let support = CompInputController.supportDir()
-        let config = CompInputController.loadConfig()
+        let support = MonkInputController.supportDir()
+        let config = MonkInputController.loadConfig()
         let langs = (config["languages"] as? [String]) ?? ["en"]
         return ChordEngine(languages: langs,
                            resourceDir: resources.appendingPathComponent("dict"),
                            supportDir: support)
     }()
     static var llm: LocalRanker? = LocalRanker(
-        config: CompInputController.loadConfig(),
+        config: MonkInputController.loadConfig(),
         resourceDir: Bundle.main.resourceURL ?? URL(fileURLWithPath: "."))
     static var chordWindow: TimeInterval = {
-        let config = CompInputController.loadConfig()
+        let config = MonkInputController.loadConfig()
         let ms = (config["chordWindowMs"] as? Double) ?? 45
         return ms / 1000.0
     }()
@@ -26,7 +26,7 @@ class CompInputController: IMKInputController {
     static func supportDir() -> URL {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory,
                                            in: .userDomainMask)[0]
-            .appendingPathComponent("Comp")
+            .appendingPathComponent("Monk")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
@@ -41,25 +41,54 @@ class CompInputController: IMKInputController {
 
     // MARK: - state
 
-    private var keystrokes: [(char: Character, time: TimeInterval)] = []
+    private struct Keystroke {
+        let char: Character   // lowercase letter, or "'"
+        let upper: Bool
+        let time: TimeInterval
+    }
+
+    private var keystrokes: [Keystroke] = []
     private var currentCandidates: [Candidate] = []
     private var contextWords: [String] = []
     private var awaitingSelection = false
 
+    /// chord groups for the engine: letters only, apostrophes excluded
     private var groups: [ChordGroup] {
         var out: [ChordGroup] = []
-        for (i, k) in keystrokes.enumerated() {
-            if i > 0 && k.time - keystrokes[i - 1].time < CompInputController.chordWindow {
+        var lastTime: TimeInterval? = nil
+        for k in keystrokes where k.char != "'" {
+            if let lt = lastTime, k.time - lt < MonkInputController.chordWindow, !out.isEmpty {
                 out[out.count - 1].letters.append(k.char)
             } else {
                 out.append(ChordGroup(letters: [k.char]))
             }
+            lastTime = k.time
         }
         return out
     }
 
-    private var bufferString: String { String(keystrokes.map { $0.char }) }
+    /// buffer as the user typed it, original case and apostrophes
+    private var bufferString: String {
+        String(keystrokes.map { k -> Character in
+            k.upper ? Character(String(k.char).uppercased()) : k.char
+        })
+    }
+
     private var hasChord: Bool { groups.contains { $0.letters.count > 1 } }
+
+    /// mirror the user's capitalization onto an inferred word:
+    /// first key shifted -> Capitalized, all keys shifted -> ALL CAPS
+    private func applyCase(_ word: String) -> String {
+        let letterKeys = keystrokes.filter { $0.char != "'" }
+        guard let first = letterKeys.first else { return word }
+        if letterKeys.count >= 2 && letterKeys.allSatisfy({ $0.upper }) {
+            return word.uppercased()
+        }
+        if first.upper {
+            return word.prefix(1).uppercased() + word.dropFirst()
+        }
+        return word
+    }
 
     // MARK: - IMK plumbing
 
@@ -91,13 +120,13 @@ class CompInputController: IMKInputController {
         case 36, 76: // return / enter
             if keystrokes.isEmpty { return false }
             if awaitingSelection, !currentCandidates.isEmpty {
-                commit(currentCandidates[0].word, client, learned: true)
+                commit(currentCandidates[0].word + " ", client, learned: true)
             } else {
                 commitRaw(client)
             }
             return true
         case 123, 124, 125, 126: // arrows
-            if awaitingSelection, let panel = CompApp.candidatesPanel {
+            if awaitingSelection, let panel = MonkApp.candidatesPanel {
                 panel.interpretKeyEvents([event])
                 return true
             }
@@ -117,7 +146,7 @@ class CompInputController: IMKInputController {
         if let d = ch.wholeNumberValue, (1...9).contains(d),
            awaitingSelection || (!currentCandidates.isEmpty && !keystrokes.isEmpty && hasChord) {
             if d - 1 < currentCandidates.count {
-                commit(currentCandidates[d - 1].word, client, learned: true)
+                commit(currentCandidates[d - 1].word + " ", client, learned: true)
                 return true
             }
         }
@@ -127,9 +156,22 @@ class CompInputController: IMKInputController {
             return commitBest(client, appendSpace: true)
         }
 
-        let lower = Character(ch.lowercased())
-        if lower.isLetter && lower.isASCII || "àâäáãåçéèêëíìîïñóòôöõúùûüÿœß".contains(lower) {
-            keystrokes.append((char: lower, time: event.timestamp))
+        if ch.isLetter {
+            let lower = Character(String(ch).lowercased())
+            let isKnownLetter = (lower.isASCII && lower.isLetter)
+                || "àâäáãåçéèêëíìîïñóòôöõúùûüÿœß".contains(lower)
+            if isKnownLetter {
+                keystrokes.append(Keystroke(char: lower, upper: ch.isUppercase,
+                                            time: event.timestamp))
+                awaitingSelection = false
+                refresh(client)
+                return true
+            }
+        }
+
+        // word-internal apostrophe joins the buffer ("doesn't", "l'heure")
+        if (ch == "'" || ch == "’") && !keystrokes.isEmpty {
+            keystrokes.append(Keystroke(char: "'", upper: false, time: event.timestamp))
             awaitingSelection = false
             refresh(client)
             return true
@@ -137,7 +179,7 @@ class CompInputController: IMKInputController {
 
         // punctuation: resolve the buffer, then pass the character through
         if !keystrokes.isEmpty {
-            if ",.;:!?)]}\"'".contains(ch) {
+            if ",.;:!?)]}\"".contains(ch) {
                 _ = commitBest(client, appendSpace: false)
             } else {
                 commitRaw(client)
@@ -152,72 +194,85 @@ class CompInputController: IMKInputController {
         if keystrokes.isEmpty {
             currentCandidates = []
             setMarked("", client)
-            CompApp.candidatesPanel?.hide()
+            MonkApp.candidatesPanel?.hide()
             return
         }
-        currentCandidates = CompInputController.engine.candidates(groups: groups)
+        currentCandidates = MonkInputController.engine.candidates(groups: groups)
         setMarked(bufferString, client)
-        if !currentCandidates.isEmpty && (hasChord || currentCandidates.first!.word != bufferString) {
-            CompApp.candidatesPanel?.update()
-            CompApp.candidatesPanel?.show()
+        let foldedBuffer = ChordEngine.fold(bufferString)
+        if !currentCandidates.isEmpty &&
+            (hasChord || ChordEngine.fold(currentCandidates.first!.word) != foldedBuffer) {
+            MonkApp.candidatesPanel?.update()
+            MonkApp.candidatesPanel?.show()
         } else {
-            CompApp.candidatesPanel?.hide()
+            MonkApp.candidatesPanel?.hide()
         }
     }
 
     /// Space pressed: commit the winner, or open selection if ambiguous.
     private func commitBest(_ client: IMKTextInput, appendSpace: Bool) -> Bool {
-        let engine = CompInputController.engine
+        let engine = MonkInputController.engine
+        let suffix = appendSpace ? " " : ""
         guard !currentCandidates.isEmpty else {
-            commit(bufferString + (appendSpace ? " " : ""), client, learned: false)
+            commit(bufferString + suffix, client, learned: false, applyCasing: false)
             return true
         }
         // buffer typed fully and is a real word -> identity, stay out of the way
-        if engine.isWord(bufferString) && !hasChord {
-            commit(bufferString + (appendSpace ? " " : ""), client, learned: false)
-            return true
+        if !hasChord {
+            if engine.isWord(bufferString) {
+                commit(bufferString + suffix, client, learned: false, applyCasing: false)
+                return true
+            }
+            // "doesnt" typed plainly -> restore the lexicon form "doesn't"
+            if let display = engine.displayForm(folded: ChordEngine.fold(bufferString)) {
+                commit(display + suffix, client, learned: false)
+                return true
+            }
         }
         if engine.isAmbiguous(currentCandidates) && !awaitingSelection {
             awaitingSelection = true
-            CompApp.candidatesPanel?.update()
-            CompApp.candidatesPanel?.show()
-            // ask the LLM (if configured) to reorder while the user decides
+            MonkApp.candidatesPanel?.update()
+            MonkApp.candidatesPanel?.show()
+            // ask the on-device LM to reorder while the user decides
             let words = currentCandidates.map { $0.word }
-            CompInputController.llm?.rerank(context: contextWords, candidates: words) {
+            MonkInputController.llm?.rerank(context: contextWords, candidates: words) {
                 [weak self] ranked in
                 guard let self = self, let ranked = ranked, self.awaitingSelection else { return }
                 let byWord = Dictionary(uniqueKeysWithValues:
                     self.currentCandidates.map { ($0.word, $0) })
                 self.currentCandidates = ranked.compactMap { byWord[$0] }
-                CompApp.candidatesPanel?.update()
+                MonkApp.candidatesPanel?.update()
             }
             return true
         }
-        commit(currentCandidates[0].word + (appendSpace ? " " : ""), client,
-               learned: currentCandidates[0].word != bufferString)
+        let top = currentCandidates[0].word
+        commit(top + suffix, client,
+               learned: ChordEngine.fold(top) != ChordEngine.fold(bufferString))
         return true
     }
 
-    private func commit(_ text: String, _ client: IMKTextInput, learned: Bool) {
+    private func commit(_ text: String, _ client: IMKTextInput, learned: Bool,
+                        applyCasing: Bool = true) {
+        let hadSpace = text.hasSuffix(" ")
+        let rawWord = text.trimmingCharacters(in: .whitespaces)
+        let out = (applyCasing ? applyCase(rawWord) : rawWord) + (hadSpace ? " " : "")
         if learned && !keystrokes.isEmpty {
-            CompInputController.engine.learn(groups: groups,
-                                             chosen: text.trimmingCharacters(in: .whitespaces))
+            MonkInputController.engine.learn(groups: groups, chosen: rawWord)
         }
-        let word = text.trimmingCharacters(in: .whitespaces)
-        if !word.isEmpty {
-            contextWords.append(word)
+        if !rawWord.isEmpty {
+            contextWords.append(rawWord.lowercased())
             if contextWords.count > 24 { contextWords.removeFirst() }
         }
-        client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+        client.insertText(out, replacementRange: NSRange(location: NSNotFound, length: 0))
         keystrokes = []
         currentCandidates = []
         awaitingSelection = false
         setMarked("", client)
-        CompApp.candidatesPanel?.hide()
+        MonkApp.candidatesPanel?.hide()
     }
 
     private func commitRaw(_ client: IMKTextInput) {
-        commit(bufferString, client, learned: false)
+        commit(bufferString, client, learned: false, applyCasing: false)
     }
 
     private func setMarked(_ s: String, _ client: IMKTextInput) {
@@ -244,6 +299,6 @@ class CompInputController: IMKInputController {
         if let client = sender as? IMKTextInput, !keystrokes.isEmpty {
             commitRaw(client)
         }
-        CompApp.candidatesPanel?.hide()
+        MonkApp.candidatesPanel?.hide()
     }
 }

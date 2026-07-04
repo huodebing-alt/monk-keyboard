@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build Comp.app (macOS input method), a .pkg installer, and a .zip.
+# Build Monk.app (macOS input method), a .pkg installer, and a .zip.
 # Requires: Xcode Command Line Tools, cmake (for the embedded LLM).
 # Run from anywhere.
 set -euo pipefail
@@ -7,9 +7,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MACOS_DIR="$ROOT/macos"
 BUILD="$MACOS_DIR/build"
-APP="$BUILD/Comp.app"
+APP="$BUILD/Monk.app"
 DIST="$ROOT/dist"
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 LLAMA_DIR="$ROOT/third_party/llama.cpp"
 LLAMA_BUILD="$LLAMA_DIR/build"
@@ -48,14 +48,14 @@ LLAMA_LIBS=(
 
 echo "==> Compiling Swift sources"
 swiftc -O -swift-version 5 \
-  -import-objc-header "$MACOS_DIR/Sources/comp-bridging.h" \
+  -import-objc-header "$MACOS_DIR/Sources/monk-bridging.h" \
   -I "$LLAMA_DIR/include" -I "$LLAMA_DIR/ggml/include" \
   -framework Cocoa -framework InputMethodKit -framework Accelerate \
-  -o "$APP/Contents/MacOS/Comp" \
+  -o "$APP/Contents/MacOS/Monk" \
   "$MACOS_DIR/Sources/main.swift" \
   "$MACOS_DIR/Sources/ChordEngine.swift" \
   "$MACOS_DIR/Sources/LocalRanker.swift" \
-  "$MACOS_DIR/Sources/CompInputController.swift" \
+  "$MACOS_DIR/Sources/MonkInputController.swift" \
   "${LLAMA_LIBS[@]}" -lc++
 
 echo "==> Assembling bundle"
@@ -65,9 +65,8 @@ for lang in en es fr de it pt; do
   cp "$ROOT/dictionaries/$lang.tsv" "$APP/Contents/Resources/dict/"
 done
 cp "$MODEL_FILE" "$APP/Contents/Resources/model.gguf"
-if [ -f "$MACOS_DIR/Resources/comp.tiff" ]; then
-  cp "$MACOS_DIR/Resources/comp.tiff" "$APP/Contents/Resources/"
-fi
+cp "$MACOS_DIR/Resources/monk.tiff" "$APP/Contents/Resources/"
+cp "$MACOS_DIR/Resources/Monk.icns" "$APP/Contents/Resources/"
 
 echo "==> Ad-hoc signing"
 codesign --force --deep --sign - "$APP"
@@ -75,17 +74,17 @@ codesign --force --deep --sign - "$APP"
 echo "==> Building zip (per-user install, no admin needed)"
 cp "$MACOS_DIR/install.sh" "$BUILD/install.sh"
 chmod +x "$BUILD/install.sh"
-(cd "$BUILD" && zip -qry "$DIST/Comp-$VERSION-macos.zip" Comp.app install.sh)
+(cd "$BUILD" && zip -qry "$DIST/Monk-$VERSION-macos.zip" Monk.app install.sh)
 
 echo "==> Building pkg (system-wide install)"
 PKGROOT="$BUILD/pkgroot"
 mkdir -p "$PKGROOT/Library/Input Methods"
 cp -R "$APP" "$PKGROOT/Library/Input Methods/"
 pkgbuild --root "$PKGROOT" \
-  --identifier com.compkeyboard.inputmethod.Comp \
+  --identifier com.monkkeyboard.inputmethod.Monk \
   --version "$VERSION" \
   --install-location / \
-  "$DIST/Comp-$VERSION-macos.pkg" >/dev/null
+  "$DIST/Monk-$VERSION-macos.pkg" >/dev/null
 
 echo "==> Done:"
 ls -lh "$DIST"

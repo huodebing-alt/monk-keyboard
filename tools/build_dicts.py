@@ -21,16 +21,44 @@ ANALYSIS_N = 10000
 
 WORD_RE = re.compile(r"^[a-zà-öø-ÿœßäöüáéíóúâêîôûàèìòùãõçñ'’-]+$", re.IGNORECASE)
 
-# contraction fragments the subtitle corpus tokenizes into standalone "words"
-FRAGMENTS = {
-    "en": {"couldn", "wouldn", "shouldn", "didn", "doesn", "isn", "wasn",
-           "weren", "hasn", "haven", "hadn", "aren", "mustn", "needn",
-           "won", "ll", "ve", "re", "em", "gotta"} - {"won"},
+# The subtitle corpus tokenizes contractions apart ("doesn't" -> "doesn" + "'t").
+# Fragments with a unique stem are rebuilt with their exact corpus count;
+# stems that double as real words (can, it, i, ...) get contractions with
+# counts distributed from the observed suffix-token masses
+# ('s 14.3M, 't 9.6M, 'm 4.4M, 're 4.1M, 'll 2.9M in the 2018 en list).
+FRAGMENT_TO_CONTRACTION = {
+    "en": {"doesn": "doesn't", "couldn": "couldn't", "wouldn": "wouldn't",
+           "shouldn": "shouldn't", "didn": "didn't", "isn": "isn't",
+           "wasn": "wasn't", "weren": "weren't", "hasn": "hasn't",
+           "hadn": "hadn't", "aren": "aren't", "mustn": "mustn't",
+           "needn": "needn't", "ain": "ain't", "don": "don't"},
 }
+
+EXTRA_WORDS = {
+    "en": [("i'm", 4386000), ("it's", 4500000), ("that's", 3500000),
+           ("can't", 2000000), ("you're", 2200000), ("i'll", 1500000),
+           ("what's", 1300000), ("i've", 1200000), ("he's", 1100000),
+           ("we're", 1000000), ("she's", 900000), ("there's", 900000),
+           ("they're", 850000), ("won't", 830000), ("i'd", 800000),
+           ("let's", 700000), ("you'll", 600000), ("haven't", 560000),
+           ("we'll", 500000), ("you've", 500000), ("we've", 350000),
+           ("who's", 300000), ("you'd", 300000), ("here's", 250000),
+           ("they've", 200000), ("he'll", 160000), ("she'll", 120000),
+           ("it'll", 110000), ("he'd", 100000), ("they'll", 100000),
+           ("she'd", 90000), ("we'd", 80000), ("they'd", 70000)],
+}
+
+# orphan suffix tokens and true junk to drop entirely
+DROP = {
+    "en": {"ll", "ve", "re", "em", "won"},  # "won" re-added via EXTRA below
+}
+DROP["en"].discard("won")  # keep "won" (past of win); "won't" comes from EXTRA
 
 
 def clean(lang: str):
     raw = ROOT / "dictionaries" / f"{lang}_raw.txt"
+    frag_map = FRAGMENT_TO_CONTRACTION.get(lang, {})
+    drop = DROP.get(lang, set())
     words, seen = [], set()
     for line in raw.read_text(encoding="utf-8").splitlines():
         parts = line.strip().split()
@@ -42,19 +70,26 @@ def clean(lang: str):
             continue
         if not WORD_RE.match(w) or w.startswith(("-", "'")) or w.endswith("-"):
             continue
-        if w in FRAGMENTS.get(lang, set()):
+        if w in drop:
             continue
+        w = frag_map.get(w, w)  # rebuild unique-stem contractions
         if w in seen:
             continue
         seen.add(w)
         words.append((w, c))
+    for w, c in EXTRA_WORDS.get(lang, []):
+        if w not in seen:
+            seen.add(w)
+            words.append((w, c))
+    words.sort(key=lambda x: -x[1])
     return words
 
 
 def strip_accents(w: str) -> str:
-    return "".join(
+    folded = "".join(
         ch for ch in unicodedata.normalize("NFD", w) if unicodedata.category(ch) != "Mn"
     )
+    return folded.replace("'", "").replace("’", "")
 
 
 def is_subsequence(chord: str, word: str) -> bool:

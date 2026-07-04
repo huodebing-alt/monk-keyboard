@@ -1,5 +1,5 @@
-/* Comp Trainer — a jazz-set typing game that teaches chord typing.
- * Mirrors the behavior of the Comp macOS input method. */
+/* Monk Trainer — a jazz-set typing game that teaches chord typing.
+ * Mirrors the behavior of the Monk macOS input method. */
 
 const CHORD_WINDOW_MS = 60;
 
@@ -36,6 +36,8 @@ const SENTENCES = {
     "there is always time for one more chorus",
     "the trumpet player took a long solo",
     "keep the rhythm steady and follow the bass",
+    "don't stop until the last note doesn't ring",
+    "it's late but the piano isn't tired yet",
   ],
   es: [
     "toma el tren a la ciudad esta noche",
@@ -88,7 +90,7 @@ let lang = "en";
 let dictLoaded = false;
 let screen = "menu"; // menu | game | results
 let currentSet = null;
-let progress = JSON.parse(localStorage.getItem("comp-progress") || "{}");
+let progress = JSON.parse(localStorage.getItem("monk-progress") || "{}");
 
 const S = {
   targets: [], targetIdx: 0, wordIdx: 0,
@@ -112,13 +114,17 @@ async function loadDict(l) {
 // ---------------------------------------------------------------- chord groups
 
 function groupsFromKeystrokes(ks) {
+  // letters only — apostrophes ride along in the buffer but never chord
   const groups = [];
-  for (let i = 0; i < ks.length; i++) {
-    if (i > 0 && ks[i].t - ks[i - 1].t < CHORD_WINDOW_MS) {
-      groups[groups.length - 1].push(ks[i].ch);
+  let last = null;
+  for (const k of ks) {
+    if (k.ch === "'") continue;
+    if (last !== null && k.t - last < CHORD_WINDOW_MS && groups.length) {
+      groups[groups.length - 1].push(k.ch);
     } else {
-      groups.push([ks[i].ch]);
+      groups.push([k.ch]);
     }
+    last = k.t;
   }
   return groups;
 }
@@ -349,7 +355,7 @@ function endSet() {
   if (acc >= 0.95 && S.chordsUsed >= S.wordsDone * 0.6 && wpm >= 25) stars = 3;
   const key = `${lang}:${currentSet.id}`;
   progress[key] = Math.max(progress[key] || 0, stars);
-  localStorage.setItem("comp-progress", JSON.stringify(progress));
+  localStorage.setItem("monk-progress", JSON.stringify(progress));
 
   $("res-stars").textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
   $("res-wpm").textContent = wpm;
@@ -424,6 +430,14 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     S.keysPressed++;
     S.keystrokes.push({ ch: key.toLowerCase(), t: performance.now() });
+    S.awaitingSelection = false;
+    refresh();
+    return;
+  }
+  if ((key === "'" || key === "’") && S.keystrokes.length) {
+    e.preventDefault();
+    S.keysPressed++;
+    S.keystrokes.push({ ch: "'", t: performance.now(), apostrophe: true });
     S.awaitingSelection = false;
     refresh();
   }

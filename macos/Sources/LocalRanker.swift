@@ -10,7 +10,7 @@ import Foundation
 /// results reorder the candidate bar in place if the user hasn't chosen yet.
 final class LocalRanker {
     private let modelURL: URL
-    private let queue = DispatchQueue(label: "com.compkeyboard.localranker", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.monkkeyboard.localranker", qos: .userInitiated)
     private var model: OpaquePointer?  // llama_model *
     private var ctx: OpaquePointer?    // llama_context *
     private var vocab: OpaquePointer?  // const llama_vocab *
@@ -37,7 +37,7 @@ final class LocalRanker {
         var mparams = llama_model_default_params()
         mparams.use_mmap = true
         guard let m = llama_model_load_from_file(modelURL.path, mparams) else {
-            NSLog("Comp: failed to load %@", modelURL.path)
+            NSLog("Monk: failed to load %@", modelURL.path)
             return false
         }
         var cparams = llama_context_default_params()
@@ -45,13 +45,13 @@ final class LocalRanker {
         cparams.n_batch = 256
         guard let c = llama_init_from_model(m, cparams) else {
             llama_model_free(m)
-            NSLog("Comp: failed to create llama context")
+            NSLog("Monk: failed to create llama context")
             return false
         }
         model = m
         ctx = c
         vocab = llama_model_get_vocab(m)
-        NSLog("Comp: local LM loaded (%@)", modelURL.lastPathComponent)
+        NSLog("Monk: local LM loaded (%@)", modelURL.lastPathComponent)
         return true
     }
 

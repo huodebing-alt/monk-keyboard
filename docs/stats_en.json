@@ -1,24 +1,24 @@
 {
   "lang": "en",
   "analysis_words": 10000,
-  "unresolved_fraction": 0.2019,
+  "unresolved_fraction": 0.2011,
   "min_chord_len_histogram": {
     "1": 5,
-    "2": 238,
-    "3": 1004,
-    "4": 2447,
-    "5": 2811,
-    "6": 1681,
-    "7": 887,
-    "8": 492,
-    "9": 233,
-    "10": 128,
-    "11": 56,
+    "2": 239,
+    "3": 1015,
+    "4": 2448,
+    "5": 2813,
+    "6": 1680,
+    "7": 881,
+    "8": 489,
+    "9": 232,
+    "10": 126,
+    "11": 54,
     "12": 8,
     "13": 7,
     "14": 3
   },
-  "expected_keys_per_word_chord": 2.903,
-  "expected_keys_per_word_full": 3.801,
-  "keystroke_savings_pct": 23.63
+  "expected_keys_per_word_chord": 2.95,
+  "expected_keys_per_word_full": 3.818,
+  "keystroke_savings_pct": 22.74
 }

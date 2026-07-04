@@ -1,12 +1,12 @@
 ---
-title: "Comp: Chord-Ahead Text Entry with Probabilistic Word Inference"
-author: "The Comp Project"
+title: "Monk: Chord-Ahead Text Entry with Probabilistic Word Inference"
+author: "Lei (Lorin) Zhao"
 date: "July 2026"
 abstract: |
-  We present Comp, a text-entry method for standard keyboards in which the user
+  We present Monk, a text-entry method for standard keyboards in which the user
   presses several key letters of a word simultaneously — a *chord* — and the
   system infers the intended word from the chord and the surrounding context.
-  Comp generalizes sequential typing: any prefix of skill, from ordinary
+  Monk generalizes sequential typing: any prefix of skill, from ordinary
   letter-by-letter typing to fully chorded entry, produces correct text, and the
   two styles can be mixed freely inside a single word. We formalize chords as
   ordered sequences of unordered key groups, give a log-linear inference model
@@ -33,7 +33,7 @@ stroke, which is why machine stenography reaches 225 words per minute while
 the fastest QWERTY typists plateau near 120. Stenography, however, demands
 special hardware and months of training on an opaque phonetic code.
 
-Comp brings the stenographic principle — *one stroke, one word* — to the
+Monk brings the stenographic principle — *one stroke, one word* — to the
 ordinary keyboard, with an encoding every user already knows: the letters of
 the word itself. To write "apple" the user presses some informative subset of
 its letters together (`A+P`, `A+P+L`, `A+P+L+E` …) and commits with the space
@@ -55,13 +55,29 @@ space. Three properties make this practical:
 T9 and its successors map one keypress per letter onto a reduced keyset and
 disambiguate with a dictionary; the keystroke count is unchanged. Gesture
 keyboards (ShapeWriter, Swype) draw one continuous stroke per word on a
-touchscreen — the closest interaction ancestor of Comp, but inapplicable to
+touchscreen — the closest interaction ancestor of Monk, but inapplicable to
 physical keyboards. Dasher restructures entry around continuous pointing.
 Abbreviation expanders (and modern "text replacement") require the user to
 pre-register each abbreviation. Stenotype and systems such as Plover achieve
 simultaneity with a phonetic chord code on dedicated or n-key-rollover
-hardware. Comp occupies the unclaimed cell of this matrix: standard hardware,
+hardware. Monk occupies the unclaimed cell of this matrix: standard hardware,
 no learned code, simultaneous entry, probabilistic decoding.
+
+## 1.2 Why "Monk"
+
+The system is named for Thelonious Monk (1917–1982), the jazz pianist and
+composer. The homage is not decorative; it is a description of the method.
+Monk's playing was defined by *chords over runs* — stabbed, dissonant
+voicings placed exactly once — and, above all, by *economy*: he was famous
+for the notes he left out, trusting the harmonic context to make the listener
+hear them anyway. That is precisely this keyboard's contract with its user.
+You strike a few letters of a word as one chord, deliberately leaving most of
+them out, and the language model — the harmonic context — supplies what was
+implied. A dissonant chord in Monk's hands resolves in context; an ambiguous
+chord under your hands resolves in context too. Monk is credited with saying
+that "the piano ain't got no wrong notes"; on this keyboard, neither does the
+chord — inference and the candidate bar absorb the imprecision. Fewer notes,
+more music.
 
 # 2. Interaction model
 
@@ -92,7 +108,7 @@ Sequential typing is the special case where every group is a singleton.
 - **Return** commits the buffer literally; **Escape** likewise abandons
   inference. Punctuation resolves the buffer and then passes through.
 
-The identity property is the load-bearing UX decision: Comp is *strictly
+The identity property is the load-bearing UX decision: Monk is *strictly
 additive* over ordinary typing. A user who never chords loses nothing; a user
 who chords badly falls back to the bar; a user who chords well types words in
 single strokes.
@@ -122,7 +138,7 @@ key when it does.
 ## 3.2 Scoring
 
 Ideal inference is $\hat{w} = \arg\max_w P(w \mid \text{context}) \, P(c \mid w)$.
-Comp approximates the log-posterior with a log-linear score over cheap,
+Monk approximates the log-posterior with a log-linear score over cheap,
 interpretable features:
 
 $$s(w, c) = \log_2 f(w) \;+\; \sum_j \lambda_j \phi_j(w, c)$$
@@ -150,7 +166,7 @@ frequency gap within a chord's candidate set (the median gap is 3.9 bits, and
 
 ## 3.3 Ambiguity and the candidate bar
 
-Let $s_1 \ge s_2$ be the two best scores. Comp commits silently iff
+Let $s_1 \ge s_2$ be the two best scores. Monk commits silently iff
 $s_1 - s_2 \ge \delta$ with $\delta = 1.5$ bits; otherwise it shows the bar.
 $\delta$ trades silent-error rate against bar-interruption rate: at
 $\delta = 0$ every chord commits instantly but near-ties are coin flips; as
@@ -167,7 +183,7 @@ list whenever the chord matches it. Context selection is where a neural
 language model helps, and the candidate-scoring task is small enough that a
 very small model suffices: the model never generates — it only compares the
 likelihoods of half a dozen given words as continuations of the user's last
-few words. Comp embeds SmolLM2-135M (Apache-2.0), a 135-million-parameter
+few words. Monk embeds SmolLM2-135M (Apache-2.0), a 135-million-parameter
 causal LM, 4-bit quantized to ~100 MB and executed by llama.cpp compiled into
 the input method. When the bar appears (and only then), each candidate $w$
 with tokenization $u_1..u_r$ is scored by its continuation log-probability
@@ -247,7 +263,7 @@ $t_k \approx 175$ ms). Sequential entry of an average word costs
 $(4.7 + 1)\,t_k \approx 1.0$ s. For chorded entry, the motor literature on
 piano and stenotype gives the cost of a prepared multi-finger stroke as
 roughly $1.2$–$1.5\,t_k$ regardless of finger count within one hand-shape.
-An average Comp word is then one chord stroke plus one space:
+An average Monk word is then one chord stroke plus one space:
 
 $$T_{\text{comp}} \approx (1.35 + 1)\,t_k \approx 0.41\ \text{s} \;\Rightarrow\; \approx 145\ \text{WPM at the same finger speed.}$$
 
@@ -261,7 +277,7 @@ ceiling is $\approx 105$ WPM; an LLM prior that halves $\beta$ restores
 $\approx 125$ WPM, and user adaptation drives the *personal* $\beta$ toward
 zero on each user's own vocabulary. The design conclusion: **the bar rate
 $\beta$, not the chord rate, is the quantity to optimize** — which is why
-Comp spends its complexity budget on ranking (features, adaptation, LLM)
+Monk spends its complexity budget on ranking (features, adaptation, LLM)
 rather than on richer chord syntax.
 
 ## 5.3 The chord window as a two-class classifier
@@ -272,7 +288,7 @@ well separated: rollover gaps concentrate below 30 ms, while deliberate
 sequential gaps for fluent typists exceed 100 ms even at speed. Modeling the
 populations as log-normal with $(\mu_1, \sigma_1) = (20\,\text{ms}, 1.6)$ and
 $(\mu_2, \sigma_2) = (160\,\text{ms}, 1.5)$, the Bayes boundary lands between
-45 and 60 ms across a wide range of mixing priors. Comp ships $\tau = 45$ ms
+45 and 60 ms across a wide range of mixing priors. Monk ships $\tau = 45$ ms
 (configurable), biased low because the two error types are asymmetric: a
 missed chord (split into two groups) usually still matches the word — group
 order is preserved — while a false merge (two intended letters fused into one
@@ -281,7 +297,54 @@ adaptive by tracking each user's sequential-gap distribution and re-solving
 for the boundary; the shipped engine exposes the threshold in its
 configuration for exactly this purpose.
 
-## 5.4 Where the chord letters should come from
+## 5.4 Maximum theoretical time saving
+
+The keystroke figures of §5.1 understate the real prize, because chorded
+letters are not merely fewer — they are *simultaneous*. Here we bound the
+total typing-time saving.
+
+**Upper bound.** From the motor model of §5.2, a sequential English word
+costs $(4.7 + 1)\,t_k = 5.7\,t_k$ (letters plus space), while a perfectly
+chorded word costs one prepared stroke plus a space,
+$(1.35 + 1)\,t_k = 2.35\,t_k$. The **maximum theoretical time saving is
+therefore**
+
+$$1 - \frac{2.35\,t_k}{5.7\,t_k} \;=\; 58.8\% \;\approx\; \mathbf{59\%},$$
+
+independent of the typist's speed $t_k$ — a shade under "type in less than
+half the time." It is an upper bound: it assumes every word resolves from a
+single chord with no candidate bar.
+
+**Practical estimate.** Charging the taxes of §5.2 — a second chord group on
+long or rare words (+12% of stroke time, from the Table 1 length
+distribution) and a candidate-bar interruption on a fraction
+$\beta \approx 0.1$ of words (achievable with the neural context prior plus
+user adaptation) at $3.5\,t_k$ per interruption — the expected word cost
+rises to $\approx 3.0\,t_k$, for a **practical saving of ≈ 47%**. We quote
+the band **45–50%** to cover $\beta$ between 0.08 and 0.15.
+
+**What the percentage means in hours.** Take a 40 WPM baseline — a typical
+professional typist — and the theoretical 59% / practical 47% band:
+
+| task | words | typing time today | with Monk | time returned |
+|---|---:|---:|---:|---:|
+| a substantial email | 100 | 2.5 min | 1.0–1.3 min | ~1.2–1.5 min |
+| an hour of email per day | ~2,400/day | 60 min/day | 25–32 min | **~30 min every day** |
+| a college essay | 2,000 | 50 min | 21–27 min | ~25 min |
+| a novel (NaNoWriMo) | 50,000 | 20.8 h | 8.5–11 h | ~10–12 h |
+| the complete Harry Potter series | 1,084,170 | 452 h | 185–240 h | **210–265 h ≈ 27–33 working days** |
+
+The last row is the one to sit with: the raw typing of the Harry Potter
+series (1,084,170 words across seven books) costs about 452 hours of pure
+keystroking at 40 WPM; at Monk's ceiling, roughly 265 of those hours — more
+than six working weeks — never need to happen. For an ordinary knowledge
+worker who types about two hours a day, the practical band returns
+**≈ 55 minutes a day, or six working weeks per year**. These figures cover
+transcription time only; composition (thinking) time is untouched — which is
+also why the saving matters: Monk removes time from the mechanical part of
+writing and returns it to the part that was never the keyboard's business.
+
+## 5.5 Where the chord letters should come from
 
 Given the freedom to press any $k$ letters of a word, which letters maximize
 disambiguation? Ranking letter positions by conditional information gain over
@@ -302,13 +365,13 @@ The boost $+6\min(n,3)$ is a capped MAP-style prior: after one selection the
 user's choice outranks the frequency winner in the median ambiguous set (§3.2
 constraint iii); after three it outranks 99% of them; the cap prevents a
 runaway prior from hiding a genuinely intended different word forever. The
-table lives locally (`~/Library/Application Support/Comp/`), is human-readable
+table lives locally (`~/Library/Application Support/Monk/`), is human-readable
 JSON, and is the entire personalization state — deleting it resets the
 keyboard.
 
 # 7. User-experience considerations
 
-- **No mode, no penalty.** The identity property (§2.2) means Comp can be left
+- **No mode, no penalty.** The identity property (§2.2) means Monk can be left
   enabled permanently; it only ever *adds* an interpretation to input that
   would otherwise be a non-word.
 - **Visibility of system state.** The composition buffer is always underlined
@@ -354,7 +417,7 @@ curve against the trainer is the natural next step.
 
 # 10. Conclusion
 
-Comp shows that the stenographic speed principle survives translation to
+Monk shows that the stenographic speed principle survives translation to
 commodity keyboards if — and only if — the decoding burden moves from the
 user to a probabilistic engine. The chord code that requires no learning
 (the word's own letters) is informative enough, by the entropy accounting of
@@ -365,18 +428,30 @@ chord; the keyboard comps the rest.
 
 ---
 
+## Acknowledgments
+
+The design, mathematical analysis, implementation, and drafting of this paper
+were carried out in collaboration with **Claude Fable 5** (Anthropic), used as
+an AI research and engineering assistant under the direction of the human
+author, who takes responsibility for the work. This disclosure follows the
+prevailing editorial norm that AI systems are acknowledged for their
+contributions rather than listed as authors. The frequency lexicons derive
+from the FrequencyWords compilation of the OpenSubtitles corpus; the embedded
+re-ranking model is SmolLM2-135M (Hugging Face TB research team), executed
+with llama.cpp.
+
 ## References
 
 1. C. E. Shannon. "Prediction and Entropy of Printed English." *Bell System
    Technical Journal*, 1951.
-2. S. K. Card, T. P. Moran, A. Newell. *The Psychology of Human-Computer
+2. S. K. Card, T. P. Moran, A. Newell. *The Psychology of Human-Monkuter
    Interaction* (the Keystroke-Level Model). Erlbaum, 1983.
 3. P.-O. Kristensson, S. Zhai. "SHARK²: A Large Vocabulary Shorthand Writing
-   System for Pen-based Computers." *UIST*, 2004.
+   System for Pen-based Monkuters." *UIST*, 2004.
 4. D. J. Ward, A. F. Blackwell, D. J. C. MacKay. "Dasher — a Data Entry
    Interface Using Continuous Gestures and Language Models." *UIST*, 2000.
-5. I. S. MacKenzie, R. W. Soukoreff. "Text Entry for Mobile Computing: Models
-   and Methods, Theory and Practice." *Human-Computer Interaction*, 2002.
+5. I. S. MacKenzie, R. W. Soukoreff. "Text Entry for Mobile Monkuting: Models
+   and Methods, Theory and Practice." *Human-Monkuter Interaction*, 2002.
 6. The Open Steno Project, *Plover*. https://www.openstenoproject.org/
 7. P. Lison, J. Tiedemann. "OpenSubtitles2016: Extracting Large Parallel
    Corpora from Movie and TV Subtitles." *LREC*, 2016. (Source of the

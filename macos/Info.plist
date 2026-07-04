@@ -5,37 +5,39 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>Comp</string>
+	<string>Monk</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.compkeyboard.inputmethod.Comp</string>
+	<string>com.monkkeyboard.inputmethod.Monk</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Comp</string>
+	<string>Monk</string>
 	<key>CFBundleDisplayName</key>
-	<string>Comp</string>
+	<string>Monk</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleIconFile</key>
+	<string>Monk</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSBackgroundOnly</key>
 	<true/>
 	<key>InputMethodConnectionName</key>
-	<string>Comp_1_Connection</string>
+	<string>Monk_1_Connection</string>
 	<key>InputMethodServerControllerClass</key>
-	<string>CompInputController</string>
+	<string>MonkInputController</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Latn</string>
 	</array>
 	<key>tsInputMethodIconFileKey</key>
-	<string>comp.tiff</string>
+	<string>monk.tiff</string>
 	<key>TISInputSourceID</key>
-	<string>com.compkeyboard.inputmethod.Comp</string>
+	<string>com.monkkeyboard.inputmethod.Monk</string>
 	<key>TISIntendedLanguage</key>
 	<string>en</string>
 	<key>NSHumanReadableCopyright</key>

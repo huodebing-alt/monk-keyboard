@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Monk — ensō logo">
+  <!-- ensō: one brush stroke, left open. one stroke, one word. -->
+  <g fill="none" stroke="#1a1a1a" stroke-linecap="round">
+    <!-- main body of the stroke -->
+    <path d="M 128 26.5
+             A 78 78 0 1 0 165 62"
+          stroke-width="15"/>
+    <!-- tapering tail where the brush lifts -->
+    <path d="M 163 59.5 A 78 78 0 0 0 148 40" stroke-width="10" opacity="0.85"/>
+    <path d="M 149.5 41.5 A 78 78 0 0 0 138 32.5" stroke-width="6" opacity="0.6"/>
+  </g>
+  <!-- the single keystroke -->
+  <rect x="86" y="86" width="28" height="28" rx="6" fill="#1a1a1a"/>
+</svg>

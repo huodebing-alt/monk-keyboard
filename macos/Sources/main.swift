@@ -2,7 +2,7 @@ import Cocoa
 import InputMethodKit
 
 /// Globals the controller reaches for.
-enum CompApp {
+enum MonkApp {
     static var server: IMKServer?
     static var candidatesPanel: IMKCandidates?
 }
@@ -10,18 +10,18 @@ enum CompApp {
 autoreleasepool {
     guard let connectionName = Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String,
           let identifier = Bundle.main.bundleIdentifier else {
-        NSLog("Comp: missing bundle configuration")
+        NSLog("Monk: missing bundle configuration")
         exit(1)
     }
     guard let server = IMKServer(name: connectionName, bundleIdentifier: identifier) else {
-        NSLog("Comp: could not create IMKServer")
+        NSLog("Monk: could not create IMKServer")
         exit(1)
     }
-    CompApp.server = server
-    CompApp.candidatesPanel = IMKCandidates(
+    MonkApp.server = server
+    MonkApp.candidatesPanel = IMKCandidates(
         server: server,
         panelType: kIMKSingleRowSteppingCandidatePanel
     )
-    NSLog("Comp input method started (%@)", connectionName)
+    NSLog("Monk input method started (%@)", connectionName)
     NSApplication.shared.run()
 }
