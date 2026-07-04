@@ -165,21 +165,38 @@ $$s(w, c) = \log_2 f(w) \;+\; \sum_j \lambda_j \phi_j(w, c)$$
 | buffer spells $w$ exactly (unchorded only) | $+40$ | identity property; dominates everything |
 | $w$ starts with the chronologically first key | $+4$ | first contact is usually the intended initial |
 | arrival order already embeds in $w$ | $+2.5$ | unscrambled chords carry order information |
-| first $\min(3,k)$ letters all fall in $w$'s first 4 | $+2$ | chords are drawn from word onsets |
-| last chord letter equals last letter of $w$ | $+3$ | word endings are salient to users |
-| per letter of $w$ not covered by $c$ | $-0.22$ | mild preference for tighter matches |
+| letters of whole leading groups (first 3 keys) fall in $w$'s first 4 | $+2$ | chords are drawn from word onsets |
+| last key equals last letter of $w$ † | $+3$ | word endings are salient to users |
+| per letter of $w$ not covered by $c$ | $-0.22$ seq. / $-0.8$ chorded | a chord is a deliberate compression — uncovered letters cost more |
 | user previously chose $w$ for this chord ($n$ times) | $+6\min(n,3)$ | adaptation, §6 |
+
+† For a chorded final group, arrival order within the group is rollover
+noise, so *any* of its letters may serve as $w$'s ending — except the single
+key already serving as $w$'s onset, which would otherwise be double-counted.
+Likewise the onset-window feature counts only letters of whole groups that
+fit within the first three keys: a partial slice of a chorded group would be
+arrival noise.
 
 $f(w)$ is the corpus frequency. The exact-match bonus is *disabled when the
 input is chorded*: a simultaneous press never means the literal letter string,
 which keeps corpus debris ("th", "bc") from shadowing real words.
 
+The first two features are *arrival-order* features. Alongside $s(w,c)$ the
+engine tracks the **order-free score** $s_\circ(w, c)$ — the same sum with
+the arrival-order features removed, i.e. what the letter *set* alone says.
+For sequential input $s$ and $s_\circ$ play no separate roles; for chorded
+input $s$ ranks the candidates (an onset-ordered chord should win locally)
+while $s_\circ$ guards recall and ambiguity (§3.3): a user mashing a chord
+does not think about order, so a lead built on rollover order must never
+silently decide a commit or crowd the intended word out of the pool.
+
 The weights were tuned on the match statistics of §5 to satisfy three ordering
 constraints: (i) identity beats all inference for sequential input; (ii) an
-onset-ordered chord beats a higher-frequency word that matches only under
-permutation; (iii) one user correction (+6) outweighs a typical top-two
-frequency gap within a chord's candidate set (the median gap is 3.9 bits, and
-90% of gaps are under 6 bits), so adaptation wins after a single selection.
+onset-ordered chord ranks above a higher-frequency word that matches only
+under permutation — but only *ranks*, per the $s_\circ$ safeguards below;
+(iii) one user correction (+6) outweighs a typical top-two frequency gap
+within a chord's candidate set (the median gap is 3.9 bits, and 90% of gaps
+are under 6 bits), so adaptation wins after a single selection.
 
 ## 3.3 Ambiguity and the candidate bar
 
@@ -192,6 +209,23 @@ log-frequency bits, $\delta = 1.5$ means "commit only if the winner is at
 least $2^{1.5} \approx 2.8\times$ more probable than the runner-up," a
 direct bound on the silent-error odds of $1/(1+2^{\delta}) \approx 26\%$ *in
 the worst accepted case* and far lower in expectation.
+
+For chorded input two things change. First, the margin widens to
+$\delta_c = 3.0$ bits: chord scores lean on order and coverage features whose
+evidence is noisier than sequential typing, so silent commits demand more
+headroom. Second, the gap is taken as $\min(s_1 - s_2,\; s_{\circ 1} -
+s_{\circ 2})$ over the pooled candidates — the order-aware gap *and* the
+order-free gap must both clear $\delta_c$. A word that leads only because its
+letters happened to arrive in spelling order (rollover luck) has a small
+order-free gap, fails the test, and is routed to the bar or the neural
+re-ranker (§3.4) instead of committing silently.
+
+The candidate pool is built with the same care: chorded input returns up to
+12 candidates (vs. 9 sequential), of which 6 seats are reserved for the
+highest *order-free* scorers. Without the reservation, an unordered press of
+P,L,A,E surfaces only the `pl-` onset family (*please, place, plane, ...*)
+and the permuted intent *apple* — order-free rank 5, order-aware rank 30 —
+would be invisible to both the bar and the re-ranker.
 
 ## 3.4 On-device neural re-ranking
 
@@ -209,8 +243,12 @@ $$\log P(w \mid \text{context}) = \sum_{j=1}^{r} \log P_{\theta}(u_j \mid \text{
 
 and the bar reorders by this score if inference finishes before the user
 selects. On Apple Silicon (CPU-only) a full re-rank of six candidates over a
-twelve-word context measures 33–45 ms — comfortably inside the human
-decision time the bar itself represents. The architecture keeps three
+twelve-word context measures 33–45 ms (the deeper 12-candidate chorded pool
+of §3.3 roughly doubles this, still inside the bar's human decision time) —
+and it is this re-ranking, not arrival order, that gets the final say on a
+chorded near-tie: the engine deliberately routes order-scrambled chords here,
+because the user who mashes a chord encodes *which* letters, not their
+sequence, and only context can recover the rest. The architecture keeps three
 guarantees: the model is never on the critical typing path; it cannot
 introduce a word outside the chord-matched set (no hallucination surface);
 and no text ever leaves the machine. With this contextual prior, chords like

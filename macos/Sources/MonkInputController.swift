@@ -232,7 +232,10 @@ class MonkInputController: IMKInputController {
             MonkApp.candidatesPanel?.hide()
             return
         }
-        currentCandidates = MonkInputController.engine.candidates(groups: groups)
+        // chorded input gets a deeper pool: arrival order may have buried the
+        // intended word, and the LM re-ranker can only promote what it sees
+        currentCandidates = MonkInputController.engine.candidates(
+            groups: groups, limit: hasChord ? ChordEngine.chordedPoolLimit : 9)
         setMarked(bufferString, client)
         let foldedBuffer = ChordEngine.fold(bufferString)
         if !MonkInputController.flowMode && !currentCandidates.isEmpty &&
@@ -269,7 +272,7 @@ class MonkInputController: IMKInputController {
         // with context; if the model isn't warm yet, local ranking decides.
         if MonkInputController.flowMode {
             var top = currentCandidates[0].word
-            if engine.isAmbiguous(currentCandidates) {
+            if engine.isAmbiguous(currentCandidates, chorded: hasChord) {
                 let words = currentCandidates.map { $0.word }
                 if let ranked = MonkInputController.llm?.rerankSync(
                        context: contextWords, candidates: words),
@@ -281,7 +284,7 @@ class MonkInputController: IMKInputController {
                    learned: ChordEngine.fold(top) != ChordEngine.fold(bufferString))
             return true
         }
-        if engine.isAmbiguous(currentCandidates) && !awaitingSelection {
+        if engine.isAmbiguous(currentCandidates, chorded: hasChord) && !awaitingSelection {
             awaitingSelection = true
             MonkApp.candidatesPanel?.update()
             MonkApp.candidatesPanel?.show()

@@ -430,7 +430,7 @@ document.addEventListener("keydown", (e) => {
     const buf = S.keystrokes.map((k) => k.ch).join("");
     if (!S.candidates.length) { commitWord(buf, false); return; }
     if (engine.isWord(buf) && !hasChord(groups)) { commitWord(buf, false); return; }
-    if (!flowMode && engine.isAmbiguous(S.candidates)) {
+    if (!flowMode && engine.isAmbiguous(S.candidates, hasChord(groups))) {
       S.awaitingSelection = true; S.selected = 0;
       renderCandidates(); return;
     }
