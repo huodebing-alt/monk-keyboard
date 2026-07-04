@@ -25,9 +25,14 @@ if [ -d "$HOME/Library/Application Support/Comp" ] && \
   echo "(migrated settings from Comp)"
 fi
 
-# nudge the text input system to notice the new input source
+# stop any old instance, then register the input source with the system so
+# it shows up in System Settings immediately (no log out needed)
 pkill -f Monk.app 2>/dev/null || true
 pkill -f Comp.app 2>/dev/null || true
+if [ -x "$HERE/monk-register" ]; then
+  xattr -d com.apple.quarantine "$HERE/monk-register" 2>/dev/null || true
+  "$HERE/monk-register" "$DEST/Monk.app" || true
+fi
 
 cat <<'EOF'
 

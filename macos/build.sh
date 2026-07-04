@@ -71,10 +71,15 @@ cp "$MACOS_DIR/Resources/Monk.icns" "$APP/Contents/Resources/"
 echo "==> Ad-hoc signing"
 codesign --force --deep --sign - "$APP"
 
+echo "==> Building registration helper"
+swiftc -O -swift-version 5 -framework Carbon \
+  -o "$BUILD/monk-register" "$MACOS_DIR/Sources/register/main.swift"
+codesign --force --sign - "$BUILD/monk-register"
+
 echo "==> Building zip (per-user install, no admin needed)"
 cp "$MACOS_DIR/install.sh" "$BUILD/install.sh"
 chmod +x "$BUILD/install.sh"
-(cd "$BUILD" && zip -qry "$DIST/Monk-$VERSION-macos.zip" Monk.app install.sh)
+(cd "$BUILD" && zip -qry "$DIST/Monk-$VERSION-macos.zip" Monk.app install.sh monk-register)
 
 echo "==> Building pkg (system-wide install)"
 PKGROOT="$BUILD/pkgroot"
