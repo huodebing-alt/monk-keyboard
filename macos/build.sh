@@ -85,7 +85,13 @@ echo "==> Building pkg (system-wide install)"
 PKGROOT="$BUILD/pkgroot"
 mkdir -p "$PKGROOT/Library/Input Methods"
 cp -R "$APP" "$PKGROOT/Library/Input Methods/"
+# forbid bundle relocation: without this, a stray Monk.app anywhere on disk
+# (e.g. an unzipped download) hijacks the install away from /Library
+COMPONENTS="$BUILD/components.plist"
+pkgbuild --analyze --root "$PKGROOT" "$COMPONENTS" >/dev/null
+/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$COMPONENTS"
 pkgbuild --root "$PKGROOT" \
+  --component-plist "$COMPONENTS" \
   --identifier com.monkkeyboard.inputmethod.Monk \
   --version "$VERSION" \
   --install-location / \
